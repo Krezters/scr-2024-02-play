@@ -22,3 +22,7 @@ POST /login                    controllers.IndexController.loginFormSubmit()
 # Product routes
 
 GET  /products/list            @controllers.ProductController.list
+GET /products                  @controllers.ProductController.getProducts(title: Option[String] ?= None)
+POST /products                 @controllers.ProductController.addProduct()
+PATCH /products                @controllers.ProductController.updateProduct()
+DELETE /products/:id           @controllers.ProductController.deleteProduct(id: String)
