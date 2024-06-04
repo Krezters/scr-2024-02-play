@@ -1,67 +1,31 @@
 package models.services
 
+import com.google.inject.Inject
+import models.dao.entities.{Product, ProductItem}
+import models.dao.repositories.ProductRepository
 import models.dto.{ProductDTO, ProductItemDTO}
-import models.{Product, ProductItem}
 
-import scala.collection.mutable.ArrayBuffer
-import scala.util.{Failure, Success, Try}
-
-object ProductService {
-  private val products: ArrayBuffer[Product] = ArrayBuffer[Product]()
-  private val productItems: ArrayBuffer[ProductItem] = ArrayBuffer[ProductItem]()
-
-  def addProduct(productDTO: ProductDTO): Unit = {
-    if (!products.exists(_.id == productDTO.id)) {
-      products += Product(productDTO.id, productDTO.title, productDTO.description)
-    }
-
-    productDTO.items.map(item => addProductItem(productDTO.id, item))
+class ProductService @Inject()(val productRepository: ProductRepository){
+  def addProduct(product: ProductDTO): Unit = {
+    productRepository.addProduct(ProductDTO.toModel(product))
+    addProductItems(product)
   }
 
-  private def addProductItem(productId: String, itemDTO: ProductItemDTO): Try[ProductItem] = {
-    val item = ProductItem(productId, itemDTO.price, itemDTO.quantity, itemDTO.inStock)
-    if (productItems.contains(item)) {
-      Failure(new Throwable("Product item exists"))
-    } else {
-      productItems += item
-      Success(item)
-    }
+  private def addProductItems(product: ProductDTO): Unit = {
+    val items = ProductItemDTO.toModel(product)
+    productRepository.addProduct(ProductDTO.toModel(product), items)
   }
 
-  def getAllProducts: List[ProductDTO] = {
-    getProducts(products)
+  def getAllProducts: List[ProductDTO] =
+    productRepository.getAll.map(c => ProductDTO.fromModel(c._1, c._2))
+
+  def getProductsByTitle(title: String): List[ProductDTO] =
+    productRepository.findByTitle(title).map(c => ProductDTO.fromModel(c._1, c._2))
+
+  def updateProduct(product: ProductDTO): Unit = {
+    productRepository.updateProduct(ProductDTO.toModel(product))
+    productRepository.updateItems(ProductItemDTO.toModel(product))
   }
 
-  def getProductsByTitle(title: String): List[ProductDTO] = {
-    getProducts(products.filter(_.title == title))
-  }
-
-  private def getProducts(productList: ArrayBuffer[Product]): List[ProductDTO] = {
-    productList.map(product => {
-      val items = productItems.filter(_.productId == product.id).map(item => {
-        ProductItemDTO(item.price, item.quantity, item.inStock)
-      }).toSet
-      ProductDTO(product.id, product.title, product.description, items)
-    }).toList
-  }
-
-  def updateProduct(productDTO: ProductDTO): Unit = {
-    products.find(_.id == productDTO.id) match {
-      case Some(product) =>
-        deleteProduct(product.id)
-        Success(addProduct(productDTO))
-      case None => ()
-    }
-  }
-
-  def deleteProduct(id: String): Unit = {
-    products.find(_.id == id) match {
-      case Some(product) =>
-        products -= product
-        productItems.filter(_.productId == product.id).foreach(item => {
-          productItems -= item
-        })
-      case None => ()
-    }
-  }
+  def deleteProduct(id: String): Unit = productRepository.deleteProduct(id)
 }

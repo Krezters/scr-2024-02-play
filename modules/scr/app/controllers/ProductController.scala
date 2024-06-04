@@ -5,10 +5,13 @@ import models.Product
 import models.dto.ProductDTO
 import models.services.ProductService
 import models.services.LogService
-import play.api.mvc.{Action, AnyContent, Controller}
+import play.api.mvc.{Action, AnyContent}
 import play.api.libs.json.Json
 
-class ProductController @Inject()(val logService: LogService) extends Authorization {
+class ProductController @Inject()(
+                                   val logService: LogService,
+                                   val productService: ProductService
+) extends Authorization {
 
   def list = authorize{ rc =>
     logService.log("Hello from ProductController")
@@ -23,24 +26,24 @@ class ProductController @Inject()(val logService: LogService) extends Authorizat
 
   def getProducts(titleOpt: Option[String]): Action[AnyContent] = Action{
     titleOpt.map{ title =>
-      Ok(Json.toJson(ProductService.getProductsByTitle(title)))
+      Ok(Json.toJson(productService.getProductsByTitle(title)))
     }.getOrElse{
-      Ok(Json.toJson(ProductService.getAllProducts))
+      Ok(Json.toJson(productService.getAllProducts))
     }
   }
 
   def addProduct(): Action[ProductDTO] = Action(parse.json[ProductDTO]){ request =>
-    ProductService.addProduct(request.body)
-    Ok(Json.toJson(ProductService.getAllProducts))
+    productService.addProduct(request.body)
+    Ok(Json.toJson(productService.getAllProducts))
   }
 
   def updateProduct(): Action[ProductDTO] = Action(parse.json[ProductDTO]){ request =>
-    ProductService.updateProduct(request.body)
-    Ok(Json.toJson(ProductService.getAllProducts))
+    productService.updateProduct(request.body)
+    Ok(Json.toJson(productService.getAllProducts))
   }
 
   def deleteProduct(id: String): Action[AnyContent] = Action{
-    ProductService.deleteProduct(id)
-    Ok(Json.toJson(ProductService.getAllProducts))
+    productService.deleteProduct(id)
+    Ok(Json.toJson(productService.getAllProducts))
   }
 }
